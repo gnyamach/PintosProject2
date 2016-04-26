@@ -17,9 +17,20 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include <string.h>
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
+
+void processArguments(char * args){
+  char * arg_parse = strtok_r(args);
+  
+  //iterate over arguments
+
+  //look for appropriate arguments on stack or in page
+
+  //handle arguments
+}
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -28,6 +39,8 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name) 
 {
+  //parse arguments here
+
   char *fn_copy;
   tid_t tid;
 
