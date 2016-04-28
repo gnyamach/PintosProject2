@@ -8,4 +8,10 @@ int process_wait (tid_t);
 void process_exit (void);
 void process_activate (void);
 
+struct argument{
+    char * argument;
+    uint32_t size;
+    int offset;
+}arg;
+
 #endif /* userprog/process.h */

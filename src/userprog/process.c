@@ -17,29 +17,32 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "userprog/pagedir.h"
+#include "../threads/thread.h"
+#include "list.h"
+#include "process.h"
 #include <string.h>
+
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
-void processArguments(char * args){
-  char * arg_parse = strtok_r(args);
-  
-  //iterate over arguments
 
-  //look for appropriate arguments on stack or in page
-
-  //handle arguments
-}
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t
-process_execute (const char *file_name) 
+process_execute (const char *file_name)
 {
-  //parse arguments here
+  //check user memory
+  if(!file_name){
+    printf("File Name Cannot Be Null");
+    return TID_ERROR;
+  }
+
+
 
   char *fn_copy;
   tid_t tid;
@@ -58,24 +61,79 @@ process_execute (const char *file_name)
   return tid;
 }
 
+void append_argument(char * arg, argument * args,int i){
+  argument new_arg = argument;
+  new_arg->size = strlen(arg);
+  new_arg->argument = arg;
+  new_arg->offset = i;
+  args[i]=argument;
+}
+
 /* A thread function that loads a user process and starts it
    running. */
 static void
 start_process (void *file_name_)
 {
+
   char *file_name = file_name_;
-  struct intr_frame if_;
+
   bool success;
 
-  /* Initialize interrupt frame and load executable. */
-  memset (&if_, 0, sizeof if_);
-  if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
-  if_.cs = SEL_UCSEG;
-  if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
+  if(file_name_ == NULL || PHYS_BASE - 4096 < 0){
+    success = FALSE;
+  }
 
-  /* If load failed, quit. */
-  palloc_free_page (file_name);
+  if(success) {
+    //parse arguments here
+    char ** svptr ;
+    char * arg_parse = strtok_r(file_name," ",svptr);
+
+    //check if we need to trim the arguments
+    int start = 0;
+    while (strlen(args[start]) == 0) {
+      start += 1;
+    }
+
+    argument * args = malloc(sizeof(argument) * strlen(arg_parse));
+    int i = 0;
+
+    //push to stack
+    while(arg_parse[i] != NULL){
+      if(i > 0) {
+        append_argument(arg_parse[i], args, i);
+
+        // /check size against PHYS_BASE
+        if (PHYS_BASE - args[i]->size < 0) {
+          success = False;
+          break;
+        } else {
+          i += 1;
+        }
+      }else{
+        if(PHYS_BASE - strlen(arg_parse[i]) < 0){
+          success = False;
+        }
+      }
+    }
+
+    if(arg_parse[i] != NULL){
+      success = False;
+    }
+
+    if (success) {
+      struct intr_frame if_;
+      /* Initialize interrupt frame and load executable. */
+      memset(&if_, 0, sizeof if_);
+      if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
+      if_.cs = SEL_UCSEG;
+      if_.eflags = FLAG_IF | FLAG_MBS;
+      success = load(file_name, &if_.eip, &if_.esp); //load stack?
+
+      /* If load failed, quit. */
+      palloc_free_page(file_name);
+    }
+  }
+
   if (!success) 
     thread_exit ();
 
@@ -214,10 +272,26 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
                           bool writable);
 
+
+/**
+ * Implemented as a commn place to check if an allocated page directory is valid.
+ */
+bool check_thread_validity(struct thread * t){
+  unit32 phys = t->pagedir;
+
+  if(phys > PHYS_BASE){
+    return false;
+  }
+  return true;
+}
+
 /* Loads an ELF executable from FILE_NAME into the current thread.
    Stores the executable's entry point into *EIP
    and its initial stack pointer into *ESP.
-   Returns true if successful, false otherwise. */
+   Returns true if successful, false otherwise.
+
+   Setup the stack in this function
+ */
 bool
 load (const char *file_name, void (**eip) (void), void **esp) 
 {
@@ -232,7 +306,9 @@ load (const char *file_name, void (**eip) (void), void **esp)
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
     goto done;
+
   process_activate ();
+
 
   /* Open executable file. */
   file = filesys_open (file_name);
@@ -329,8 +405,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
   return success;
 }
 
-/* load() helpers. */
 
+/* load() helpers. */
 static bool install_page (void *upage, void *kpage, bool writable);
 
 /* Checks whether PHDR describes a valid, loadable segment in
@@ -450,7 +526,7 @@ setup_stack (void **esp)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
-        *esp = PHYS_BASE;
+        *esp = PHYS_BASE - 12;
       else
         palloc_free_page (kpage);
     }

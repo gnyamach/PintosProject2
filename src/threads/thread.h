@@ -88,11 +88,12 @@ struct thread
     int nice;
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
+    uint32_t * pagedir;                 /*page directory*/
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    int default_priority;
+    int default_priority;               /*default priority*/
     struct list_elem allelem;           /* List element for all threads list. */
-    int64_t waketime;
+    int64_t waketime;                   /*time to wakeup*/
     struct list_elem sleep_elem;
     struct list donators;
     struct list_elem donate_elem;
