@@ -1,0 +1,16 @@
+Copying tests/userprog/wait-killed to scratch partition...
+Copying tests/userprog/child-bad to scratch partition...
+qemu-system-x86_64 -device isa-debug-exit -hda /tmp/n6hXLjDJQR.dsk -m 4 -net none -nographic -monitor null
+PiLo hda1
+Loading...........
+Kernel command line: -q -f extract run wait-killed
+Kernel PANIC at ../../threads/init.c:264 in parse_options(): unknown option `-f' (use -h for help)
+Call stack: 0xc0027e9b.
+The `backtrace' program can make call stacks useful.
+Read "Backtraces" in the "Debugging Tools" chapter
+of the Pintos documentation for more information.
+Timer: 0 ticks
+Thread: 0 idle ticks, 0 kernel ticks, 0 user ticks
+Console: 394 characters output
+Keyboard: 0 keys pressed
+Powering off...

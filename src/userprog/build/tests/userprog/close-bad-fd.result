@@ -1,0 +1,5 @@
+FAIL
+Kernel panic in run: PANIC at ../../threads/init.c:264 in parse_options(): unknown option `-f' (use -h for help)
+Call stack: 0xc0027e9b
+Translation of call stack:
+0xc0027e9b: ustar_parse_header (...ild/../../lib/ustar.c:214)

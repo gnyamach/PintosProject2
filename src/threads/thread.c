@@ -13,6 +13,7 @@
 #include "threads/vaddr.h"
 #include "threads/fp_arithmetic.h"
 #include "devices/timer.h"
+#include "threads/synch.h"
 #include "thread.h"
 #include "../lib/kernel/list.h"
 #include "fp_arithmetic.h"
@@ -134,8 +135,6 @@ thread_start (void)
   /* Wait for the idle thread to initialize idle_thread. */
   sema_down (&idle_started);
 }
-
-
 
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
@@ -518,6 +517,7 @@ is_thread (struct thread *t)
   return t != NULL && t->magic == THREAD_MAGIC;
 }
 
+
 /* Does basic initialization of T as a blocked thread named
    NAME. */
 static void
@@ -544,6 +544,12 @@ init_thread (struct thread *t, const char *name, int priority)
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
+
+  list_init(&t->children);
+  t->cp = NULL;
+  t->parent = NULL;
+  t->fd = 2;
+  list_init(&t->file_list);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -659,7 +665,6 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
-
 void check_priority(void) {
   if(!list_empty(&ready_list)) {
     struct thread *recent_add = list_entry(list_begin(&ready_list), struct thread, elem);
@@ -785,4 +790,48 @@ void set_mlfqs_priority(struct thread * t){
       }
       t->priority = new_priority;
     }
+}
+
+bool is_thread_alive(tid_t thread_num){
+  struct list_elem * e;
+  for(e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e)){
+    if(list_entry(e,struct thread, allelem)->tid == thread_num){
+      return true;
+    }
+  }
+  return false;
+}
+
+
+void remove_children(struct thread * cur){
+  //remove children
+  struct list_elem *e = list_begin(&cur->children);
+  struct list_elem *end = list_end(&cur->children);
+  for(e = list_begin(&cur->children), e != end; e = list_next(e)){
+    struct child * child = list_entry(e,struct child, elem);
+    list_remove(child);
+    free(child);
+  }
+
+struct child * get_child(tid_t child_tid){
+    struct child * child;
+    struct thread * t = thread_current();
+    struct list_elem * e;
+
+    for(e = list_begin(&t->children);e != list_end(&t->children); e = list_next(e)){
+      child = list_entry(e,struct child,elem);
+      if(child_tid == child->tid){
+        return child;
+      }
+    }
+    return NULL;
+}
+
+void remove_child(struct child * child){
+    list_remove(&child->elem);
+    free(child);
+}
+
+void add_child(struct thread * t, struct child * cp){
+  list_insert(&cp->elem,&t->children);
 }
