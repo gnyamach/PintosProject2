@@ -193,4 +193,5 @@ void add_child(struct thread * t, struct child * cp);
 void remove_children(struct thread * cur);
 void remove_donators(struct lock *lock);
 int set_q_priority(struct thread * t);
+void update_priority (void);
 #endif /* threads/thread.h */

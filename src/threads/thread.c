@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <random.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "threads/flags.h"
 #include "threads/interrupt.h"
@@ -547,7 +548,6 @@ init_thread (struct thread *t, const char *name, int priority)
 
   list_init(&t->children);
   t->cp = NULL;
-  t->parent = NULL;
   t->fd = 2;
   list_init(&t->file_list);
 }
@@ -810,7 +810,7 @@ void remove_children(struct thread * cur) {
   for (e = list_begin(&cur->children); e != end; e = list_next(e)) {
     struct child *child = list_entry(e, struct child, elem);
     list_remove(&child->elem);
-    free(&child);
+    free(child);
   }
 }
 
