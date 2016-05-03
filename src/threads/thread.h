@@ -29,7 +29,7 @@ typedef int tid_t;
  */
 struct file_elem{
     int fd;
-    char * file_name;
+    const char * file_name;
     struct file * file;
     struct list_elem elem;
 };
@@ -40,7 +40,7 @@ struct file_elem{
 struct child{
     tid_t  tid;
     struct thread * t;
-    uint32_t status;
+    int status;
     struct list_elem elem;              /* List element. */
 };
 
@@ -167,7 +167,7 @@ struct thread *thread_current (void);
 tid_t thread_tid (void);
 const char *thread_name (void);
 
-void thread_exit (void) NO_RETURN;
+void thread_exit (void);
 void thread_yield (void);
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
@@ -189,4 +189,8 @@ void set_recent_cpu(struct thread *t);
 void set_avg_load(struct thread *t);
 void set_mlfqs_priority(struct thread *t);
 void reset_proiriorities_mlfqs(void);
+void add_child(struct thread * t, struct child * cp);
+void remove_children(struct thread * cur);
+void remove_donators(struct lock *lock);
+int set_q_priority(struct thread * t);
 #endif /* threads/thread.h */

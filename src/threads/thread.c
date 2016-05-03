@@ -809,8 +809,8 @@ void remove_children(struct thread * cur) {
   struct list_elem *end = list_end(&cur->children);
   for (e = list_begin(&cur->children); e != end; e = list_next(e)) {
     struct child *child = list_entry(e, struct child, elem);
-    list_remove(child);
-    free(child);
+    list_remove(&child->elem);
+    free(&child);
   }
 }
 

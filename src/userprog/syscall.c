@@ -1,16 +1,24 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
+#include "devices/input.h"
+#include  "threads/malloc.h"
+#include "filesys/file.h"
 #include <syscall-nr.h>
+#include "filesys/filesys.h"
+#include "filesys/off_t.h"
+#include "threads/synch.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 #include "devices/shutdown.h"
 #include "../threads/thread.h"
+#include "userprog/process.h"
 
 static void syscall_handler (struct intr_frame *);
 
 #define VADD_USER_BOTTOM ((void *) 0x08048000)
 
-struct lock *  file_lock;
+struct lock   file_lock;
 
 void
 syscall_init (void){
@@ -55,9 +63,10 @@ put_user (uint8_t *udst, uint8_t byte)
   return error_code != -1;
 }
 
-bool create(const char * file){
+bool create(const char * file,unsigned initial_size){
   lock_acquire(&file_lock);
-  bool success = filesys_create(file);
+   bool success =  filesys_create(file, initial_size);
+
   lock_release(&file_lock);
   return success;
 }
@@ -81,6 +90,7 @@ int open(const char * file){
    if(ofile == NULL){
      return -1;
    }
+
    struct file_elem * felem = malloc(sizeof(struct file_elem));
    felem->file_name = file;
    felem->file=ofile;
@@ -99,13 +109,13 @@ int filesize(int fd){
         lock_release(&file_lock);
         return 0;
     }
-    int l = file_length(f);
+    int l = file_length(f->file);
     lock_release(&file_lock);
    return l;
 }
 
 int read(int fd, void * buffer, unsigned size){
-    int bytes = 0;
+    off_t bytes = 0;
     if(fd ==1){
         //file input is file out so bad
         return -1;
@@ -115,8 +125,9 @@ int read(int fd, void * buffer, unsigned size){
     if(fd == 0) {
         //file system input so read from keyboard
          int fsize = 0;
+          unsigned i;
          uint8_t *fbuf = (uint8_t *) buffer;
-         for (int i = 0; i < size; i++) {
+         for (i = 0; i < size; i++) {
             fsize += 1;
             fbuf[i] = input_getc();
          }
@@ -130,7 +141,7 @@ int read(int fd, void * buffer, unsigned size){
             lock_release(&file_lock);
             return -1;
         }else{
-            bytes = file_read(f->file,size);
+            bytes = file_read(f->file,buffer,size);
         }
     }
     lock_release(&file_lock);
@@ -173,7 +184,7 @@ unsigned tell(int fd){
     unsigned byte;
    lock_acquire(&file_lock);
    struct file_elem * f = get_file(fd);
-   byte = file_tell(f);
+   byte = file_tell(f->file);
    lock_release(&file_lock);
    return byte;
 }
@@ -187,13 +198,13 @@ void close(int fd){
     //remove and close for current thread
     list_remove(&f->elem);
     file_close(f->file);
-    free(f->file_name);
+    free(&f->file_name);
     free(f);
 
    lock_release(&file_lock);
 }
 
-int wait(tid_t pid){
+int wait(pid_t pid){
   return process_wait(pid);
 }
 
@@ -214,6 +225,24 @@ void check_valid_ptr(const void *vaddr){
   if(vaddr <VADD_USER_BOTTOM){
     exit(-1);
   }
+}
+pid_t exec (const char *cmd_line)
+{
+    pid_t pid = process_execute(cmd_line);
+    struct child * cp = get_child(pid);
+    ASSERT(cp);
+
+    while (cp->status > 0)
+    {
+        barrier();
+    }
+
+    if (cp->status == -1)
+    {
+        pid = -1;
+        return pid;
+    }
+    return pid;
 }
 
 struct file_elem *  get_file(int fd){

@@ -15,10 +15,12 @@
 #include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/palloc.h"
+#include "threads/malloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/synch.h"
 #include "userprog/pagedir.h"
+#include "threads/vaddr.h"
 #include "../threads/thread.h"
 #include "list.h"
 #include "process.h"
@@ -87,31 +89,24 @@ start_process (void *file_name_)
   }
 
   int i = 0;
-  char ** svptr ;
-  char * arg_parse = strtok_r(file_name," ",svptr);
+  char * svptr ;
+  char * arg_parse = strtok_r(file_name," ",&svptr);
 
   if(success) {
-    //parse arguments here
-    int start = 0;
+
 
     struct argument * args = malloc(sizeof(struct argument) * strlen(arg_parse));
-    uint32_t testBase = PHYS_BASE;
+
 
     //push to stack
-    while(arg_parse[i] != NULL){
-        append_argument(arg_parse[i], args, i);
-
-        // /check size against PHYS_BASE
-        if (testBase - args[i].size < 0) {
-          success = false;
-          break;
-        } else {
-          i += 1;
-        }
+    while(&arg_parse[i] != NULL){
+        append_argument(&arg_parse[i], args, i);
+        uint32_t args_size = 0;
+        i+=1;
       }
     }
 
-    if(arg_parse[i] != NULL){
+    if(i == 0){
       success = false;
     }
 
@@ -122,7 +117,7 @@ start_process (void *file_name_)
       if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
       if_.cs = SEL_UCSEG;
       if_.eflags = FLAG_IF | FLAG_MBS;
-      success = load(&arg_parse, &if_.eip, &if_.esp); //load stack?
+      success = load(arg_parse, &if_.eip, &if_.esp); //load stack?
 
       /* If load failed, quit. */
       palloc_free_page(file_name);
@@ -186,7 +181,7 @@ process_exit (void)
   while( e != end){
     struct list_elem * next = list_next(e);
     struct child * child = list_entry(e,struct child, elem);
-    list_remove(child);
+    list_remove(&child->elem);
     free(child);
     e = next;
   }
@@ -288,7 +283,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp,char * args);
+static bool setup_stack (void **esp,const char * args);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -303,7 +298,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    Setup the stack in this function
  */
 bool
-load (const char *args, void (**eip) (void), void **esp)
+load (const char * args, void (**eip) (void), void **esp)
 {
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
@@ -408,7 +403,7 @@ load (const char *args, void (**eip) (void), void **esp)
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
 
-  if(*eip > PHYS_BASE){
+  if(!is_user_vaddr(*eip)){
     success = false;
     goto done;
   }
@@ -532,7 +527,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. Esp is the stack and args is the parsed arguments*/
 static bool
-setup_stack (void **esp,char * args)
+setup_stack (void **esp,const char * args)
 {
   uint8_t *kpage;
   bool success = false;
@@ -549,7 +544,7 @@ setup_stack (void **esp,char * args)
     }
 
   char ** argv = malloc(2 * sizeof(char *));
-  char * curr = args;
+  const char * curr = args;
   int i = 0;
   int argSize = 2;
 
@@ -561,16 +556,12 @@ setup_stack (void **esp,char * args)
     *esp -= strlen(curr) + 1;
     argv[i] = *esp;
 
-    if(*esp < 0){
-      return false;
-    }
-
     if(i > argSize){
       argv = realloc(argv,argSize * sizeof(char *));
       argSize += 1;
     }
     memcpy(*esp,curr,strlen(curr) + 1);
-    curr = curr[i];
+    curr = &curr[i];
     i += 1;
   }
   argSize = i;
@@ -579,34 +570,20 @@ setup_stack (void **esp,char * args)
   //push argv
   for(i = argSize; i >= 0; i--){
      *esp -= sizeof(char *);
-     if(esp < 0){
-       return false;
-     }
      memcpy(*esp,&argv[i],sizeof(char *));
   }
 
   curr = *esp;
+
   *esp -= sizeof(char **);
-
-  if(*esp < 0){
-    return false;
-  }
-
   memcpy(*esp,&curr,sizeof(char **));
+
   *esp -= sizeof(int);
+  memcpy(*esp,&argSize,sizeof(int));
 
-  if(*esp < 0){
-    return false;
-  }
-
-  memcpy(*esp,&argv,sizeof(int));
   *esp -= sizeof(void *);
-
-  if(*esp < 0){
-    return false;
-  }
-
   memcpy(*esp,&argv[argSize],sizeof(void *));
+
   free(&argv);
 
   return success;
