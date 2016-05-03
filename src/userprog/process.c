@@ -183,10 +183,12 @@ process_exit (void)
   //remove children
   struct list_elem *e = list_begin(&cur->children);
   struct list_elem *end = list_end(&cur->children);
-  for(e = list_begin(&cur->children), e != end; e = list_next(e)){
+  while( e != end){
+    struct list_elem * next = list_next(e);
     struct child * child = list_entry(e,struct child, elem);
     list_remove(child);
     free(child);
+    e = next;
   }
 
   /* Destroy the current process's page directory and switch back
@@ -605,7 +607,7 @@ setup_stack (void **esp,char * args)
   }
 
   memcpy(*esp,&argv[argSize],sizeof(void *));
-  free(argv);
+  free(&argv);
 
   return success;
 }

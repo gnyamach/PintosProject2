@@ -1,17 +1,11 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
-#include <src/lib/user/syscall.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "devices/shutdown.h"
 
 static void syscall_handler (struct intr_frame *);
-
-#User added
-
-#include "vaddr.h"
-#include "../threads/thread.h"
 
 #define VADD_USER_BOTTOM =((void *) 0x08048000)
 static void check_valid

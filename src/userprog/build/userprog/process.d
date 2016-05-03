@@ -8,5 +8,5 @@ userprog/process.o: ../../userprog/process.c ../../userprog/process.h \
  ../../devices/block.h ../../filesys/file.h ../../filesys/off_t.h \
  ../../filesys/filesys.h ../../threads/flags.h ../../threads/init.h \
  ../../threads/interrupt.h ../../threads/palloc.h ../../threads/vaddr.h \
- ../../userprog/../threads/thread.h ../../userprog/process.h \
- ../../userprog/syscall.h
+ ../../threads/synch.h ../../userprog/../threads/thread.h \
+ ../../userprog/process.h ../../userprog/syscall.h
