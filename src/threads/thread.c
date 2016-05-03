@@ -803,35 +803,36 @@ bool is_thread_alive(tid_t thread_num){
 }
 
 
-void remove_children(struct thread * cur){
+void remove_children(struct thread * cur) {
   //remove children
   struct list_elem *e = list_begin(&cur->children);
   struct list_elem *end = list_end(&cur->children);
-  for(e = list_begin(&cur->children), e != end; e = list_next(e)){
-    struct child * child = list_entry(e,struct child, elem);
+  for (e = list_begin(&cur->children); e != end; e = list_next(e)) {
+    struct child *child = list_entry(e, struct child, elem);
     list_remove(child);
     free(child);
   }
 
-struct child * get_child(tid_t child_tid){
-    struct child * child;
-    struct thread * t = thread_current();
-    struct list_elem * e;
+  struct child *get_child(tid_t child_tid) {
+    struct child *child;
+    struct thread *t = thread_current();
+    struct list_elem *e;
 
-    for(e = list_begin(&t->children);e != list_end(&t->children); e = list_next(e)){
-      child = list_entry(e,struct child,elem);
-      if(child_tid == child->tid){
+    for (e = list_begin(&t->children); e != list_end(&t->children); e = list_next(e)) {
+      child = list_entry(e, struct child, elem);
+      if (child_tid == child->tid) {
         return child;
       }
     }
     return NULL;
+  }
 }
 
-void remove_child(struct child * child){
-    list_remove(&child->elem);
+  void remove_child(struct child * child){
+    list_remove(&(child->elem));
     free(child);
-}
+  }
 
-void add_child(struct thread * t, struct child * cp){
-  list_insert(&cp->elem,&t->children);
-}
+  void add_child(struct thread * t, struct child * cp){
+    list_insert(&cp->elem,&t->children.head);
+  }

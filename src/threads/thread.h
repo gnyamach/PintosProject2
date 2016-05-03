@@ -149,7 +149,7 @@ extern bool thread_mlfqs;
 void thread_init (void);
 void thread_start (void);
 
-bool is_thread_alive(tid_t thread_num););
+bool is_thread_alive(tid_t thread_num);
 
 struct child * get_child(tid_t child_tid);
 void remove_child(struct child * child);
