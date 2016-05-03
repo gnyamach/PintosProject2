@@ -792,6 +792,7 @@ void set_mlfqs_priority(struct thread * t){
     }
 }
 
+
 bool is_thread_alive(tid_t thread_num){
   struct list_elem * e;
   for(e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e)){
@@ -802,7 +803,6 @@ bool is_thread_alive(tid_t thread_num){
   return false;
 }
 
-
 void remove_children(struct thread * cur) {
   //remove children
   struct list_elem *e = list_begin(&cur->children);
@@ -812,8 +812,9 @@ void remove_children(struct thread * cur) {
     list_remove(child);
     free(child);
   }
+}
 
-  struct child *get_child(tid_t child_tid) {
+struct child *get_child(tid_t child_tid) {
     struct child *child;
     struct thread *t = thread_current();
     struct list_elem *e;
@@ -825,7 +826,6 @@ void remove_children(struct thread * cur) {
       }
     }
     return NULL;
-  }
 }
 
   void remove_child(struct child * child){

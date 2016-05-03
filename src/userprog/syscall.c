@@ -4,12 +4,13 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "devices/shutdown.h"
+#include "../threads/thread.h"
 
 static void syscall_handler (struct intr_frame *);
 
-#define VADD_USER_BOTTOM =((void *) 0x08048000)
-static void check_valid
-struct lock file_lock;
+#define VADD_USER_BOTTOM ((void *) 0x08048000)
+
+struct lock *  file_lock;
 
 void
 syscall_init (void){
@@ -23,7 +24,6 @@ syscall_handler (struct intr_frame *f UNUSED)
   thread_exit ();
 }
 
-# Additions
 
 /* Reads a byte at user virtual address UADDR.
 UADDR must be below PHYS_BASE.
@@ -116,7 +116,7 @@ int read(int fd, void * buffer, unsigned size){
         //file system input so read from keyboard
          int fsize = 0;
          uint8_t *fbuf = (uint8_t *) buffer;
-         for (i = 0; i < size; i++) {
+         for (int i = 0; i < size; i++) {
             fsize += 1;
             fbuf[i] = input_getc();
          }
@@ -170,8 +170,8 @@ void seek(int fd, unsigned position){
 }
 
 unsigned tell(int fd){
-   off_t byte;
-   lock_aquire(&file_lock);
+    unsigned byte;
+   lock_acquire(&file_lock);
    struct file_elem * f = get_file(fd);
    byte = file_tell(f);
    lock_release(&file_lock);
@@ -185,7 +185,7 @@ void close(int fd){
     struct thread * t = thread_current();
 
     //remove and close for current thread
-    list_remove(f->elem);
+    list_remove(&f->elem);
     file_close(f->file);
     free(f->file_name);
     free(f);
@@ -193,13 +193,13 @@ void close(int fd){
    lock_release(&file_lock);
 }
 
-int wait(pid_t pid){
+int wait(tid_t pid){
   return process_wait(pid);
 }
 
 void exit(int status){
   struct thread * t = thread_current();
-  if(thread_is_alive(t->parent)){
+  if(is_thread_alive(t->parent)){
       t->cp->status = status;
   }
 
@@ -212,7 +212,7 @@ void halt(){
 
 void check_valid_ptr(const void *vaddr){
   if(vaddr <VADD_USER_BOTTOM){
-    exit(ERROR);
+    exit(-1);
   }
 }
 
